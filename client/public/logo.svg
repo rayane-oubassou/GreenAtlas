@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <!-- Outer circle -->
+  <circle cx="60" cy="60" r="56" fill="#14532d" stroke="#4ade80" stroke-width="2.5"/>
+
+  <!-- Globe meridian lines -->
+  <ellipse cx="60" cy="60" rx="25" ry="56" stroke="#4ade80" stroke-width="1" stroke-opacity="0.35" fill="none"/>
+  <line x1="4" y1="60" x2="116" y2="60" stroke="#4ade80" stroke-width="1" stroke-opacity="0.35"/>
+  <line x1="4" y1="40" x2="116" y2="40" stroke="#4ade80" stroke-width="0.8" stroke-opacity="0.2"/>
+  <line x1="4" y1="80" x2="116" y2="80" stroke="#4ade80" stroke-width="0.8" stroke-opacity="0.2"/>
+
+  <!-- Large mountain -->
+  <polygon points="60,22 88,78 32,78" fill="#22c55e"/>
+  <!-- Mountain shadow -->
+  <polygon points="60,22 88,78 60,78" fill="#166534"/>
+  <!-- Snow cap -->
+  <polygon points="60,22 69,42 51,42" fill="white" opacity="0.9"/>
+
+  <!-- Left tree -->
+  <polygon points="30,78 42,52 54,78" fill="#4ade80"/>
+  <polygon points="28,70 42,44 56,70" fill="#22c55e"/>
+  <rect x="40" y="78" width="4" height="7" fill="#92400e" rx="1"/>
+
+  <!-- Right small tree -->
+  <polygon points="74,78 83,60 92,78" fill="#4ade80"/>
+  <polygon points="73,71 83,53 93,71" fill="#22c55e"/>
+  <rect x="81" y="78" width="4" height="6" fill="#92400e" rx="1"/>
+
+  <!-- Ground line -->
+  <line x1="18" y1="85" x2="102" y2="85" stroke="#4ade80" stroke-width="1.5" stroke-opacity="0.5"/>
+
+  <!-- Text: GreenAtlas -->
+  <text x="60" y="101" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="700" fill="#4ade80" letter-spacing="1">GREENATLAS</text>
+  <text x="60" y="113" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="7.5" fill="#86efac" letter-spacing="2">IFRANE</text>
+</svg>
