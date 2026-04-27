@@ -10,20 +10,25 @@ import { reportService } from '../services/reportService';
 import { weatherService } from '../services/weatherService';
 import { Report, WeatherData, ReportStats, FireHotspot, RISK_COLORS } from '../types';
 
-const ease = [0.16, 1, 0.3, 1] as [number,number,number,number];
-
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { delay, duration: 0.45, ease },
+/* ── Framer handles opacity only — CSS handles the blur to avoid GPU glitch ── */
+const blurFade = (delay = 0) => ({
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { delay, duration: 0.6, ease: [0.0, 0.0, 0.2, 1.0] as const },
+});
+const blurStyle = (delay = 0): React.CSSProperties => ({
+  animationDelay: `${delay}s`,
 });
 
 /* ── Animated weather metric tile ────────────────────────────── */
 const WeatherTile = ({ icon, v, l, delay }: { icon: string; v: string; l: string; delay: number }) => (
   <motion.div
-    {...fadeUp(delay)}
-    whileHover={{ scale: 1.05, y: -2 }}
-    className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2 border border-slate-100 dark:border-slate-700 text-center cursor-default"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay, duration: 0.6, ease: 'easeOut' }}
+    whileHover={{ scale: 1.05, y: -2, transition: { duration: 0.2 } }}
+    className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2 border border-slate-100 dark:border-slate-700 text-center cursor-default blur-in"
+    style={blurStyle(delay)}
   >
     <span className="text-base">{icon}</span>
     <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">{v}</p>
@@ -93,21 +98,16 @@ const Dashboard: React.FC = () => {
       {/* Hero banner with parallax */}
       <motion.div
         ref={heroRef}
-        {...fadeUp(0)}
+        {...blurFade(0)}
+        className="relative rounded-2xl overflow-hidden cursor-default blur-in"
+        style={{ background: 'linear-gradient(135deg, #0e2f1c 0%, #164427 50%, #16a34a 100%)', ...blurStyle(0) }}
         onMouseMove={onHeroMouse}
         onMouseLeave={onHeroLeave}
-        className="relative rounded-2xl overflow-hidden cursor-default"
-        style={{ background: 'linear-gradient(135deg, #0e2f1c 0%, #164427 50%, #16a34a 100%)' }}
       >
-        {/* Parallax radial glow */}
         <motion.div
           className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 70% 50%, #4ade80 0%, transparent 60%)',
-            x: bgX, y: bgY,
-          }}
+          style={{ backgroundImage: 'radial-gradient(circle at 70% 50%, #4ade80 0%, transparent 60%)', x: bgX, y: bgY }}
         />
-        {/* Subtle grid */}
         <div className="absolute inset-0 opacity-[0.04]"
           style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
@@ -115,19 +115,19 @@ const Dashboard: React.FC = () => {
           <div>
             <p className="text-primary-300 text-xs font-semibold uppercase tracking-widest mb-1">{t('dashboard.title')}</p>
             <h2 className="text-xl font-bold text-white">
-              {t('dashboard.welcome')}, {user?.name?.split(' ')[0]} 👋
+              {t('dashboard.welcome')}, {user?.name?.split(' ')[0]}
             </h2>
             <p className="text-primary-200/70 text-sm mt-1">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-3">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+            <motion.div whileHover={{ scale: 1.05, transition: { duration: 0.2 } }} whileTap={{ scale: 0.97 }}>
               <Link to="/map" className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors border border-white/10">
                 🗺️ {t('nav.liveMap')}
               </Link>
             </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+            <motion.div whileHover={{ scale: 1.05, transition: { duration: 0.2 } }} whileTap={{ scale: 0.97 }}>
               <Link to="/report/new"
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all"
                 style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 16px rgba(34,197,94,0.4)' }}>
@@ -138,7 +138,7 @@ const Dashboard: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Stats row — staggered */}
+      {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard delay={0.05} title={t('dashboard.totalReports')} value={stats?.total ?? 0}
           icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
@@ -155,17 +155,20 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Map + sidebar */}
-      <motion.div {...fadeUp(0.25)} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <motion.div
+        {...blurFade(0.25)}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-6 blur-in"
+        style={blurStyle(0.25)}
+      >
         {/* Map */}
         <motion.div
           className="lg:col-span-2 card p-0 overflow-hidden"
           style={{ height: 360 }}
-          whileHover={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}
-          transition={{ duration: 0.25 }}
+          whileHover={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)', transition: { duration: 0.25 } }}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
             <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">🗺️ {t('dashboard.liveMap')}</span>
-            <motion.div whileHover={{ x: 2 }}>
+            <motion.div whileHover={{ x: 2, transition: { duration: 0.2 } }}>
               <Link to="/map" className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 font-semibold hover:underline">{t('dashboard.fullMap')}</Link>
             </motion.div>
           </div>
@@ -176,9 +179,15 @@ const Dashboard: React.FC = () => {
 
         {/* Right column */}
         <div className="flex flex-col gap-4">
+
           {/* Weather */}
           {weather ? (
-            <motion.div {...fadeUp(0.3)} className="card" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              {...blurFade(0.3)}
+              whileHover={{ y: -2, transition: { duration: 0.2 } }}
+              className="card blur-in"
+              style={blurStyle(0.3)}
+            >
               <div className="flex items-center justify-between mb-3">
                 <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm">☁️ {t('dashboard.weather')}</p>
                 <span className="text-[11px] text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-700">Ifrane, MA</span>
@@ -208,7 +217,12 @@ const Dashboard: React.FC = () => {
 
           {/* Fire risk */}
           {weather && (
-            <motion.div {...fadeUp(0.35)} className="card overflow-hidden relative" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              {...blurFade(0.35)}
+              whileHover={{ y: -2, transition: { duration: 0.2 } }}
+              className="card overflow-hidden relative blur-in"
+              style={blurStyle(0.35)}
+            >
               <motion.div
                 className="absolute inset-0 opacity-5 pointer-events-none"
                 style={{ background: `radial-gradient(circle at 80% 50%, ${riskColor}, transparent)` }}
@@ -232,7 +246,7 @@ const Dashboard: React.FC = () => {
                 <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: riskColor+'18', color: riskColor }}>
                   {weather.fireRiskLevel}
                 </span>
-                <motion.div whileHover={{ x: 2 }}>
+                <motion.div whileHover={{ x: 2, transition: { duration: 0.2 } }}>
                   <Link to="/forest" className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:underline">Details →</Link>
                 </motion.div>
               </div>
@@ -240,7 +254,12 @@ const Dashboard: React.FC = () => {
           )}
 
           {/* FIRMS hotspots */}
-          <motion.div {...fadeUp(0.4)} className="card flex items-center gap-4" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+          <motion.div
+            {...blurFade(0.4)}
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="card flex items-center gap-4 blur-in"
+            style={blurStyle(0.4)}
+          >
             <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-center justify-center text-2xl shrink-0">🛰️</div>
             <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{hotspots.length}</p>
@@ -248,19 +267,28 @@ const Dashboard: React.FC = () => {
               <p className="text-[11px] text-slate-400 truncate">{t('dashboard.nasaSub')}</p>
             </div>
           </motion.div>
+
         </div>
       </motion.div>
 
       {/* Recent reports */}
-      <motion.div {...fadeUp(0.45)}>
+      <motion.div
+        {...blurFade(0.45)}
+        className="blur-in"
+        style={blurStyle(0.45)}
+      >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-slate-800 dark:text-slate-100">{t('dashboard.recentIncidents')}</h3>
-          <motion.div whileHover={{ x: 2 }}>
+          <motion.div whileHover={{ x: 2, transition: { duration: 0.2 } }}>
             <Link to="/map" className="text-sm text-primary-600 dark:text-primary-400 font-semibold hover:underline">{t('dashboard.allReports')}</Link>
           </motion.div>
         </div>
         {reports.length === 0 ? (
-          <motion.div {...fadeUp(0.5)} className="card text-center py-12">
+          <motion.div
+            {...blurFade(0.5)}
+            className="card text-center py-12 blur-in"
+            style={blurStyle(0.5)}
+          >
             <p className="text-4xl mb-3">📋</p>
             <p className="text-slate-500 dark:text-slate-400 font-medium">{t('dashboard.noIncidents')}</p>
             <Link to="/report/new" className="text-primary-600 dark:text-primary-400 text-sm font-semibold hover:underline mt-1 block">{t('dashboard.beFirst')}</Link>
@@ -275,6 +303,7 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </motion.div>
+
     </div>
   );
 };
