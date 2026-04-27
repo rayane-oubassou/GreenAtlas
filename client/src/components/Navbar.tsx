@@ -11,14 +11,15 @@ import { useAuth } from '../context/AuthContext';
 const ease = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
 const pageMeta: Record<string, { title: string; sub: string; emoji: string; color: string }> = {
-  '/':           { title: 'Dashboard',        sub: 'Environmental overview',    emoji: '🌍', color: 'from-slate-500 to-slate-600' },
-  '/map':        { title: 'Live Map',          sub: 'Real-time incidents',       emoji: '🗺️', color: 'from-blue-500 to-indigo-600' },
-  '/report/new': { title: 'Report Incident',   sub: 'Submit new report',         emoji: '⚠️', color: 'from-amber-500 to-orange-600' },
-  '/water':      { title: 'Water Resources',   sub: 'Levels & availability',     emoji: '💧', color: 'from-cyan-500 to-blue-600' },
-  '/forest':     { title: 'Forest Monitor',    sub: 'Fire risk & health',        emoji: '🌲', color: 'from-primary-500 to-emerald-600' },
-  '/users':      { title: 'Users',             sub: 'Manage platform members',   emoji: '👥', color: 'from-violet-500 to-purple-600' },
-  '/admin':      { title: 'Admin Panel',       sub: 'Analytics & management',    emoji: '⚙️', color: 'from-rose-500 to-red-600' },
-  '/profile':    { title: 'My Profile',        sub: 'Account settings',          emoji: '👤', color: 'from-teal-500 to-emerald-600' },
+  '/':             { title: 'Dashboard',        sub: 'Environmental overview',    emoji: '🌍', color: 'from-slate-500 to-slate-600' },
+  '/map':          { title: 'Live Map',          sub: 'Real-time incidents',       emoji: '🗺️', color: 'from-blue-500 to-indigo-600' },
+  '/report/new':   { title: 'Report Incident',   sub: 'Submit new report',         emoji: '⚠️', color: 'from-amber-500 to-orange-600' },
+  '/water':        { title: 'Water Resources',   sub: 'Levels & availability',     emoji: '💧', color: 'from-cyan-500 to-blue-600' },
+  '/forest':       { title: 'Forest Monitor',    sub: 'Fire risk & health',        emoji: '🌲', color: 'from-primary-500 to-emerald-600' },
+  '/users':        { title: 'Users',             sub: 'Manage platform members',   emoji: '👥', color: 'from-violet-500 to-purple-600' },
+  '/admin':        { title: 'Admin Panel',       sub: 'Analytics & management',    emoji: '⚙️', color: 'from-rose-500 to-red-600' },
+  '/profile':      { title: 'My Profile',        sub: 'Account settings',          emoji: '👤', color: 'from-teal-500 to-emerald-600' },
+  '/leaderboard':  { title: 'Leaderboard',       sub: 'Top contributors',          emoji: '🏆', color: 'from-yellow-500 to-amber-600' },
 };
 
 interface Page { path: string; label: string; emoji: string; roles?: string[] }
@@ -29,8 +30,9 @@ const allPages: Page[] = [
   { path: '/water',      label: 'Water Resources',  emoji: '💧' },
   { path: '/forest',     label: 'Forest Monitor',   emoji: '🌲' },
   { path: '/profile',    label: 'My Profile',        emoji: '👤' },
-  { path: '/users',      label: 'Users',             emoji: '👥', roles: ['admin','agent'] },
-  { path: '/admin',      label: 'Admin Panel',       emoji: '⚙️', roles: ['admin'] },
+  { path: '/leaderboard', label: 'Leaderboard',       emoji: '🏆' },
+  { path: '/users',       label: 'Users',             emoji: '👥', roles: ['admin','agent'] },
+  { path: '/admin',       label: 'Admin Panel',       emoji: '⚙️', roles: ['admin'] },
 ];
 
 const Navbar: React.FC = () => {

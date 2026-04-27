@@ -8,7 +8,8 @@ import MapView from '../components/MapView';
 import ReportCard from '../components/ReportCard';
 import { reportService } from '../services/reportService';
 import { weatherService } from '../services/weatherService';
-import { Report, WeatherData, ReportStats, FireHotspot, RISK_COLORS } from '../types';
+import { Report, WeatherData, ReportStats, FireHotspot, RISK_COLORS, BADGE_DEFINITIONS } from '../types';
+import { leaderboardService } from '../services/leaderboardService';
 
 /* ── Framer handles opacity only — CSS handles the blur to avoid GPU glitch ── */
 const blurFade = (delay = 0) => ({
@@ -60,19 +61,29 @@ const Dashboard: React.FC = () => {
   const [stats,   setStats]   = useState<ReportStats | null>(null);
   const [hotspots, setHotspots] = useState<FireHotspot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [rank, setRank] = useState<number | null>(null);
+  const [greenScore, setGreenScore] = useState(0);
+  const [topBadges, setTopBadges] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [r, s, w, e] = await Promise.allSettled([
+      const [r, s, w, e, lb] = await Promise.allSettled([
         reportService.getAll({ limit: 6 }),
         reportService.getStats(),
         weatherService.getWeather(),
         weatherService.getEnvironmentData(),
+        leaderboardService.get('alltime'),
       ]);
       if (r.status === 'fulfilled') setReports(r.value.data);
       if (s.status === 'fulfilled') setStats(s.value.data);
       if (w.status === 'fulfilled') setWeather(w.value.data);
       if (e.status === 'fulfilled') setHotspots(e.value.data.fireHotspots);
+      if (lb.status === 'fulfilled') {
+        const cu = lb.value.data.currentUser;
+        setRank(cu.rank);
+        setGreenScore(cu.greenScore);
+        setTopBadges(cu.badges.slice(0, 3));
+      }
       setIsLoading(false);
     })();
   }, []);
@@ -136,6 +147,40 @@ const Dashboard: React.FC = () => {
             </motion.div>
           </div>
         </div>
+      </motion.div>
+
+      {/* Green Score widget */}
+      <motion.div
+        {...blurFade(0.05)}
+        className="blur-in"
+        style={blurStyle(0.05)}
+      >
+        <Link to="/leaderboard" className="block">
+          <motion.div
+            whileHover={{ y: -2, transition: { duration: 0.2 } }}
+            className="rounded-2xl border border-amber-200/60 dark:border-amber-700/30 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 px-5 py-3.5 flex items-center gap-4"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-xl shrink-0 shadow-sm">🏆</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Green Score</p>
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                <span className="text-xl font-black text-slate-800 dark:text-slate-100">{greenScore} pts</span>
+                {rank != null && (
+                  <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Rank #{rank}</span>
+                )}
+                {topBadges.map(b => {
+                  const def = BADGE_DEFINITIONS[b];
+                  return def ? (
+                    <span key={b} title={def.label} className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gradient-to-r ${def.color} text-white`}>
+                      {def.emoji} <span className="hidden sm:inline">{def.label}</span>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            </div>
+            <span className="text-xs text-amber-500 dark:text-amber-400 font-semibold shrink-0">View →</span>
+          </motion.div>
+        </Link>
       </motion.div>
 
       {/* Stats row */}

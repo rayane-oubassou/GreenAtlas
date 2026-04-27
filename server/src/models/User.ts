@@ -6,6 +6,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: 'citizen' | 'agent' | 'admin';
+  greenScore: number;
+  badges: string[];
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -38,6 +40,15 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ['citizen', 'agent', 'admin'],
       default: 'citizen',
+    },
+    greenScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    badges: {
+      type: [String],
+      default: [],
     },
   },
   { timestamps: true }

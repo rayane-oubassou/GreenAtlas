@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import api from '../services/api';
+import { leaderboardService } from '../services/leaderboardService';
+import { BADGE_DEFINITIONS } from '../types';
 
 const Profile: React.FC = () => {
   const { user, login } = useAuth();
@@ -17,6 +20,19 @@ const Profile: React.FC = () => {
   const [pwdMsg, setPwdMsg] = useState('');
   const [pwdError, setPwdError] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
+
+  const [greenScore, setGreenScore] = useState(0);
+  const [badges, setBadges] = useState<string[]>([]);
+  const [rank, setRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    leaderboardService.get('alltime').then(res => {
+      const cu = res.data.currentUser;
+      setGreenScore(cu.greenScore);
+      setBadges(cu.badges);
+      setRank(cu.rank);
+    }).catch(() => {});
+  }, []);
 
   if (!user) return null;
 
@@ -170,6 +186,46 @@ const Profile: React.FC = () => {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Green Score */}
+      <div className="card border border-amber-200/60 dark:border-amber-700/30">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100">🏆 {t('profile.greenScore')}</h3>
+          <Link to="/leaderboard" className="text-xs text-amber-600 dark:text-amber-400 font-semibold hover:underline">
+            {t('profile.viewLeaderboard')} →
+          </Link>
+        </div>
+        <div className="flex items-center gap-6 mb-4">
+          <div className="text-center">
+            <p className="text-3xl font-black text-amber-500">{greenScore}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{t('leaderboard.pts')}</p>
+          </div>
+          {rank != null && (
+            <div className="text-center">
+              <p className="text-3xl font-black text-primary-500">#{rank}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t('leaderboard.rank')}</p>
+            </div>
+          )}
+        </div>
+        {badges.length > 0 ? (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('profile.badges')}</p>
+            <div className="flex flex-wrap gap-2">
+              {badges.map(id => {
+                const def = BADGE_DEFINITIONS[id];
+                return def ? (
+                  <span key={id} className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-gradient-to-r ${def.color} text-white shadow-sm`}>
+                    <span>{def.emoji}</span>
+                    <span>{def.label}</span>
+                  </span>
+                ) : null;
+              })}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">{t('profile.noBadges')}</p>
+        )}
       </div>
 
       {/* Account stats */}

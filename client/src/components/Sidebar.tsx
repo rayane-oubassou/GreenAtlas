@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Map, AlertTriangle, Droplets, TreePine,
-  Users2, Settings2, LogOut, User, Plus, ChevronLeft, ChevronRight,
+  Users2, Settings2, LogOut, User, Plus, ChevronLeft, ChevronRight, Trophy,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Logo from './Logo';
@@ -23,8 +23,9 @@ const sections: { label: string | null; items: NavItem[]; roles?: string[] }[] =
   {
     label: null,
     items: [
-      { path: '/',    labelKey: 'nav.dashboard',     Icon: LayoutDashboard, end: true },
-      { path: '/map', labelKey: 'nav.liveMap',        Icon: Map },
+      { path: '/',             labelKey: 'nav.dashboard',     Icon: LayoutDashboard, end: true },
+      { path: '/map',          labelKey: 'nav.liveMap',        Icon: Map },
+      { path: '/leaderboard',  labelKey: 'nav.leaderboard',    Icon: Trophy },
     ],
   },
   {

@@ -10,8 +10,41 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  greenScore?: number;
+  badges?: string[];
   createdAt?: string;
 }
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  name: string;
+  role: UserRole;
+  greenScore: number;
+  badges: string[];
+  reportCount: number;
+}
+
+export interface LeaderboardData {
+  period: 'alltime' | 'monthly';
+  entries: LeaderboardEntry[];
+  currentUser: {
+    rank: number | null;
+    greenScore: number;
+    badges: string[];
+    reportCount: number;
+  };
+}
+
+export const BADGE_DEFINITIONS: Record<string, { label: string; emoji: string; color: string }> = {
+  first_report:    { label: 'First Responder',  emoji: '⭐', color: 'from-yellow-400 to-amber-500'  },
+  fire_watcher:    { label: 'Fire Watcher',      emoji: '🔥', color: 'from-red-400 to-orange-500'   },
+  forest_guardian: { label: 'Forest Guardian',   emoji: '🌲', color: 'from-green-400 to-emerald-500'},
+  water_sentinel:  { label: 'Water Sentinel',    emoji: '💧', color: 'from-blue-400 to-cyan-500'    },
+  eco_warrior:     { label: 'Eco Warrior',        emoji: '🛡️', color: 'from-violet-400 to-purple-500'},
+  verified_hero:   { label: 'Verified Hero',      emoji: '✅', color: 'from-teal-400 to-green-500'  },
+  top_ranger:      { label: 'Top Ranger',         emoji: '🏆', color: 'from-yellow-500 to-amber-600'},
+};
 
 export interface AuthState {
   user: User | null;

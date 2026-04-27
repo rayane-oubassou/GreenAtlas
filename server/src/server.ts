@@ -16,6 +16,7 @@ import waterRoutes from './routes/waterRoutes';
 import forestRoutes from './routes/forestRoutes';
 import userRoutes from './routes/userRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import leaderboardRoutes from './routes/leaderboardRoutes';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/water', waterRoutes);
 app.use('/api/forest', forestRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({

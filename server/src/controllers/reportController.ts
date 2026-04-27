@@ -3,6 +3,7 @@ import Report from '../models/Report';
 import Notification from '../models/Notification';
 import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { CATEGORY_POINTS, VERIFIED_BONUS, RESOLVED_BONUS, awardPointsAndRefreshBadges } from '../utils/scoring';
 
 export const getAllReports = async (
   req: AuthRequest,
@@ -101,6 +102,8 @@ export const createReport = async (
       await Notification.insertMany(notifications);
     }
 
+    await awardPointsAndRefreshBadges(req.user!._id.toString(), CATEGORY_POINTS[category as keyof typeof CATEGORY_POINTS] ?? 10);
+
     res.status(201).json({ success: true, message: 'Report submitted successfully', data: report });
   } catch (error) {
     next(error);
@@ -148,7 +151,7 @@ export const updateReport = async (
       { new: true, runValidators: true }
     ).populate('user', 'name email role');
 
-    // Notify report author if status changed
+    // Notify report author and award points if status changed
     if (req.body.status && previousStatus !== req.body.status) {
       await Notification.create({
         message: `Your report "${report.title}" status changed to ${req.body.status}.`,
@@ -156,6 +159,19 @@ export const updateReport = async (
         recipient: report.user,
         report: report._id,
       });
+
+      let bonusPoints = 0;
+      const newStatus = req.body.status;
+      if (newStatus === 'verified' && previousStatus === 'pending') {
+        bonusPoints = VERIFIED_BONUS;
+      } else if (newStatus === 'resolved' && previousStatus === 'verified') {
+        bonusPoints = RESOLVED_BONUS;
+      } else if (newStatus === 'resolved' && previousStatus === 'pending') {
+        bonusPoints = VERIFIED_BONUS + RESOLVED_BONUS;
+      }
+      if (bonusPoints > 0) {
+        await awardPointsAndRefreshBadges(report.user.toString(), bonusPoints);
+      }
     }
 
     res.json({ success: true, message: 'Report updated', data: updated });

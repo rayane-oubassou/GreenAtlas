@@ -19,6 +19,7 @@ import ForestMonitoring from './pages/ForestMonitoring';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import UsersPage from './pages/UsersPage';
+import Leaderboard from './pages/Leaderboard';
 
 const pageVariants = {
   initial: { opacity: 0, y: 18, filter: 'blur(3px)' },
@@ -70,7 +71,8 @@ const InnerApp: React.FC = () => {
           <Route path="/report/new" element={<Wrap><ReportForm /></Wrap>} />
           <Route path="/water"      element={<Wrap><WaterMonitoring /></Wrap>} />
           <Route path="/forest"     element={<Wrap><ForestMonitoring /></Wrap>} />
-          <Route path="/profile"    element={<Wrap><Profile /></Wrap>} />
+          <Route path="/profile"     element={<Wrap><Profile /></Wrap>} />
+          <Route path="/leaderboard" element={<Wrap><Leaderboard /></Wrap>} />
           <Route path="/users"      element={<Wrap roles={['admin','agent']}><UsersPage /></Wrap>} />
           <Route path="/admin"      element={<Wrap roles={['admin']}><AdminDashboard /></Wrap>} />
           <Route path="*"           element={<Navigate to="/" replace />} />
