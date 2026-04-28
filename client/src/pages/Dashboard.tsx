@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { Map, Cloud, Flame, Satellite, ClipboardList, Trophy, Droplets, Wind, CloudRain } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import StatCard from '../components/StatCard';
 import MapView from '../components/MapView';
@@ -22,7 +23,7 @@ const blurStyle = (delay = 0): React.CSSProperties => ({
 });
 
 /* ── Animated weather metric tile ────────────────────────────── */
-const WeatherTile = ({ icon, v, l, delay }: { icon: string; v: string; l: string; delay: number }) => (
+const WeatherTile = ({ icon, v, l, delay }: { icon: React.ReactNode; v: string; l: string; delay: number }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
@@ -31,7 +32,7 @@ const WeatherTile = ({ icon, v, l, delay }: { icon: string; v: string; l: string
     className="bg-slate-50 dark:bg-slate-800 rounded-xl p-2 border border-slate-100 dark:border-slate-700 text-center cursor-default blur-in"
     style={blurStyle(delay)}
   >
-    <span className="text-base">{icon}</span>
+    <div className="flex justify-center text-slate-500 dark:text-slate-400">{icon}</div>
     <p className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-1">{v}</p>
     <p className="text-[10px] text-slate-400">{l}</p>
   </motion.div>
@@ -135,7 +136,7 @@ const Dashboard: React.FC = () => {
           <div className="hidden sm:flex items-center gap-3">
             <motion.div whileHover={{ scale: 1.05, transition: { duration: 0.2 } }} whileTap={{ scale: 0.97 }}>
               <Link to="/map" className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors border border-white/10">
-                🗺️ {t('nav.liveMap')}
+                <Map className="w-3.5 h-3.5" /> {t('nav.liveMap')}
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05, transition: { duration: 0.2 } }} whileTap={{ scale: 0.97 }}>
@@ -160,7 +161,9 @@ const Dashboard: React.FC = () => {
             whileHover={{ y: -2, transition: { duration: 0.2 } }}
             className="rounded-2xl border border-amber-200/60 dark:border-amber-700/30 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 px-5 py-3.5 flex items-center gap-4"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-xl shrink-0 shadow-sm">🏆</div>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shrink-0 shadow-sm">
+              <Trophy className="w-5 h-5 text-white" />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Green Score</p>
               <div className="flex items-center gap-3 mt-0.5 flex-wrap">
@@ -171,8 +174,8 @@ const Dashboard: React.FC = () => {
                 {topBadges.map(b => {
                   const def = BADGE_DEFINITIONS[b];
                   return def ? (
-                    <span key={b} title={def.label} className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gradient-to-r ${def.color} text-white`}>
-                      {def.emoji} <span className="hidden sm:inline">{def.label}</span>
+                    <span key={b} title={def.label} className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-r ${def.color} text-white`}>
+                      {def.label}
                     </span>
                   ) : null;
                 })}
@@ -212,7 +215,7 @@ const Dashboard: React.FC = () => {
           whileHover={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)', transition: { duration: 0.25 } }}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-            <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm">🗺️ {t('dashboard.liveMap')}</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-1.5"><Map className="w-4 h-4 text-slate-400" />{t('dashboard.liveMap')}</span>
             <motion.div whileHover={{ x: 2, transition: { duration: 0.2 } }}>
               <Link to="/map" className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 font-semibold hover:underline">{t('dashboard.fullMap')}</Link>
             </motion.div>
@@ -234,7 +237,7 @@ const Dashboard: React.FC = () => {
               style={blurStyle(0.3)}
             >
               <div className="flex items-center justify-between mb-3">
-                <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm">☁️ {t('dashboard.weather')}</p>
+                <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-1.5"><Cloud className="w-4 h-4 text-slate-400" />{t('dashboard.weather')}</p>
                 <span className="text-[11px] text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-700">Ifrane, MA</span>
               </div>
               <div className="flex items-center gap-3 mb-4">
@@ -251,9 +254,9 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <WeatherTile delay={0.32} icon="💧" v={`${weather.humidity}%`} l="Humidity" />
-                <WeatherTile delay={0.36} icon="🌬️" v={`${weather.windSpeed}`} l="km/h" />
-                <WeatherTile delay={0.40} icon="🌧️" v={`${weather.rainfall}`} l="mm rain" />
+                <WeatherTile delay={0.32} icon={<Droplets className="w-4 h-4" />} v={`${weather.humidity}%`} l="Humidity" />
+                <WeatherTile delay={0.36} icon={<Wind className="w-4 h-4" />} v={`${weather.windSpeed}`} l="km/h" />
+                <WeatherTile delay={0.40} icon={<CloudRain className="w-4 h-4" />} v={`${weather.rainfall}`} l="mm rain" />
               </div>
             </motion.div>
           ) : (
@@ -274,7 +277,7 @@ const Dashboard: React.FC = () => {
                 animate={{ opacity: [0.05, 0.08, 0.05] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               />
-              <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3">🔥 {t('dashboard.fireRisk')}</p>
+              <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 flex items-center gap-1.5"><Flame className="w-4 h-4 text-slate-400" />{t('dashboard.fireRisk')}</p>
               <div className="flex items-center gap-3 mb-2">
                 <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
                   <motion.div
@@ -305,7 +308,9 @@ const Dashboard: React.FC = () => {
             className="card flex items-center gap-4 blur-in"
             style={blurStyle(0.4)}
           >
-            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-center justify-center text-2xl shrink-0">🛰️</div>
+            <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 flex items-center justify-center shrink-0">
+              <Satellite className="w-6 h-6 text-red-400" />
+            </div>
             <div className="min-w-0">
               <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{hotspots.length}</p>
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t('dashboard.nasaHotspots')}</p>
@@ -334,7 +339,7 @@ const Dashboard: React.FC = () => {
             className="card text-center py-12 blur-in"
             style={blurStyle(0.5)}
           >
-            <p className="text-4xl mb-3">📋</p>
+            <ClipboardList className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
             <p className="text-slate-500 dark:text-slate-400 font-medium">{t('dashboard.noIncidents')}</p>
             <Link to="/report/new" className="text-primary-600 dark:text-primary-400 text-sm font-semibold hover:underline mt-1 block">{t('dashboard.beFirst')}</Link>
           </motion.div>

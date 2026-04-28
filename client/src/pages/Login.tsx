@@ -1,134 +1,90 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import Particles, { initParticlesEngine } from '@tsparticles/react';
-import { loadSlim } from '@tsparticles/slim';
-import type { Container, ISourceOptions } from '@tsparticles/engine';
 import { useTranslation } from 'react-i18next';
-import { Eye, EyeOff, ArrowRight, Flame, Droplets, TreePine } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../components/Logo';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
-/* ── Starfield particles (subtle, no network) ─────────────────── */
-const starsConfig: ISourceOptions = {
-  background: { color: { value: 'transparent' } },
-  fpsLimit: 40,
-  particles: {
-    color: { value: ['#ffffff', '#86efac', '#d1fae5'] },
-    links: { enable: false },
-    move: { enable: true, speed: 0.2, direction: 'none', random: true, outModes: { default: 'out' } },
-    number: { value: 90, density: { enable: true } },
-    opacity: { value: { min: 0.05, max: 0.45 }, animation: { enable: true, speed: 0.3, sync: false } },
-    shape: { type: 'circle' },
-    size: { value: { min: 0.5, max: 1.8 } },
-  },
-  detectRetina: true,
-};
+/* ── Count-up hook ────────────────────────────────── */
+function useCountUp(target: number, duration = 1500, delay = 600) {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const start = performance.now();
+      const tick = (now: number) => {
+        const p     = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        setCount(Math.round(eased * target));
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, delay);
+    return () => clearTimeout(t);
+  }, [target, duration, delay]);
+  return count;
+}
 
-/* ── Radar visualization ──────────────────────────────────────── */
-const Radar: React.FC = () => {
-  const rings = [1, 0.72, 0.48, 0.26];
-  const blips = [
-    { angle: 42,  r: 0.6, label: 'Wildfire zone',    color: '#ef4444' },
-    { angle: 145, r: 0.38, label: 'Water source',    color: '#38bdf8' },
-    { angle: 240, r: 0.55, label: 'Forest patch',    color: '#22c55e' },
-    { angle: 310, r: 0.3,  label: 'Logging alert',   color: '#f59e0b' },
-    { angle: 78,  r: 0.82, label: 'Hotspot',         color: '#ef4444' },
-  ];
+/* ── Stats config ─────────────────────────────────── */
+const STATS = [
+  { target: 12400, label: 'Hectares protected', suffix: '+',
+    fmt: (n: number) => n.toLocaleString() },
+  { target: 340,   label: 'Incidents resolved', suffix: '',
+    fmt: (n: number) => String(n) },
+  { target: 1200,  label: 'Active monitors',    suffix: '+',
+    fmt: (n: number) => n.toLocaleString() },
+];
 
+function StatItem({ target, label, suffix, fmt }: typeof STATS[0]) {
+  const count = useCountUp(target);
   return (
-    <div className="relative w-72 h-72 mx-auto select-none">
-      {/* Rings */}
-      {rings.map((s, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            width: `${s * 100}%`, height: `${s * 100}%`,
-            top: `${(1 - s) * 50}%`, left: `${(1 - s) * 50}%`,
-            border: `1px solid rgba(34,197,94,${0.08 + i * 0.05})`,
-          }}
-        />
-      ))}
-
-      {/* Cross-hairs */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-full h-px bg-primary-500/10" />
-      </div>
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-px h-full bg-primary-500/10" />
-      </div>
-
-      {/* Rotating scanner */}
-      <motion.div
-        className="absolute inset-0"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-      >
-        <div className="absolute top-1/2 left-1/2 w-1/2 origin-left"
-          style={{ height: '1px', background: 'linear-gradient(90deg, rgba(34,197,94,0.7), transparent)' }} />
-      </motion.div>
-
-      {/* Sweep gradient */}
-      <motion.div
-        className="absolute inset-0 rounded-full"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-        style={{
-          background: 'conic-gradient(from 0deg, rgba(34,197,94,0.12) 0deg, transparent 60deg)',
-        }}
-      />
-
-      {/* Blips */}
-      {blips.map((b, i) => {
-        const rad = (b.angle * Math.PI) / 180;
-        const x = 50 + b.r * 50 * Math.cos(rad);
-        const y = 50 + b.r * 50 * Math.sin(rad);
-        return (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${x}%`, top: `${y}%`, background: b.color, boxShadow: `0 0 6px ${b.color}` }}
-            animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.3, 0.8] }}
-            transition={{ duration: 2.5 + i * 0.7, repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 }}
-          />
-        );
-      })}
-
-      {/* Center */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <motion.div
-          className="w-3 h-3 rounded-full bg-primary-400"
-          style={{ boxShadow: '0 0 12px rgba(34,197,94,0.8)' }}
-          animate={{ scale: [1, 1.4, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
+    <div>
+      <p className="text-white font-bold text-lg leading-none tabular-nums">
+        {fmt(count)}{count > 0 ? suffix : ''}
+      </p>
+      <p className="text-slate-500 text-xs mt-1">{label}</p>
     </div>
   );
+}
+
+/* ── Headline lines (BlurText style) ─────────────── */
+const HEADLINE = ['Monitoring', 'nature,', 'protecting', 'tomorrow.'];
+
+const headlineVariants = {
+  show: { transition: { staggerChildren: 0.12, delayChildren: 0.5 } },
+};
+const lineVariants = {
+  hidden: { opacity: 0, y: 28, filter: 'blur(6px)' },
+  show:   {
+    opacity: 1, y: 0, filter: 'blur(0px)',
+    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
+  },
 };
 
-/* ── Main component ───────────────────────────────────────────── */
+/* ── Form stagger ─────────────────────────────────── */
+const formVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.09, delayChildren: 0.15 } },
+};
+const fieldVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } },
+};
+
+/* ── Component ────────────────────────────────────── */
 const Login: React.FC = () => {
   const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { t } = useTranslation();
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { t }     = useTranslation();
+  const from      = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError]               = useState('');
   const [isLoading, setIsLoading]       = useState(false);
-  const [starsReady, setStarsReady]     = useState(false);
-
-  useEffect(() => {
-    initParticlesEngine(async e => { await loadSlim(e); }).then(() => setStarsReady(true));
-  }, []);
-
-  const onParticlesLoaded = useCallback(async (_c?: Container) => {}, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,190 +101,163 @@ const Login: React.FC = () => {
     }
   };
 
-  const demos = [
-    { role: 'Admin',   email: 'admin@greenatlas.ma', pwd: 'Admin@123',   icon: '👑', color: '#f87171' },
-    { role: 'Agent',   email: 'agent@greenatlas.ma', pwd: 'Agent@123',   icon: '🛡️', color: '#a78bfa' },
-    { role: 'Citizen', email: 'karim@example.com',   pwd: 'Citizen@123', icon: '🌱', color: '#34d399' },
-  ];
-
-  /* ── Left panel aurora orbs ── */
-  const orbs = [
-    { w: 520, h: 420, x: -80,  y: -60,  color: 'rgba(22,163,74,0.22)',  dur: 18 },
-    { w: 380, h: 380, x: 280,  y: 160,  color: 'rgba(16,185,129,0.16)', dur: 22 },
-    { w: 460, h: 300, x: 60,   y: 380,  color: 'rgba(5,150,105,0.14)',  dur: 26 },
-    { w: 300, h: 300, x: 420,  y: -80,  color: 'rgba(52,211,153,0.12)', dur: 20 },
-  ];
-
   return (
-    <div className="min-h-screen flex bg-[#060d09] overflow-hidden">
+    <div className="min-h-screen flex">
 
-      {/* ════════════ LEFT — VISUAL PANEL ════════════ */}
-      <div className="hidden lg:flex flex-col w-[58%] relative overflow-hidden">
+      {/* ── LEFT PANEL ─────────────────────────────── */}
+      <div
+        className="hidden lg:flex flex-col w-[52%] relative overflow-hidden"
+        style={{ background: '#0b1d12' }}
+      >
+        {/* Static glow blobs */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div style={{
+            position: 'absolute', top: -120, right: -80,
+            width: 500, height: 500, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(22,163,74,0.2) 0%, transparent 70%)',
+          }} />
+          <div style={{
+            position: 'absolute', bottom: -80, left: -60,
+            width: 360, height: 360, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.13) 0%, transparent 70%)',
+          }} />
+        </div>
 
-        {/* Animated aurora blobs */}
-        {orbs.map((o, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full pointer-events-none"
-            style={{
-              width: o.w, height: o.h,
-              left: o.x, top: o.y,
-              background: `radial-gradient(ellipse, ${o.color}, transparent 70%)`,
-              filter: 'blur(55px)',
-            }}
-            animate={{
-              x: [0, 35, -20, 0],
-              y: [0, -45, 25, 0],
-              scale: [1, 1.08, 0.96, 1],
-            }}
-            transition={{ duration: o.dur, repeat: Infinity, ease: 'easeInOut', delay: i * 2.5 }}
-          />
-        ))}
+        {/* Diagonal line texture */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          backgroundImage: 'repeating-linear-gradient(-55deg, transparent, transparent 36px, rgba(255,255,255,0.018) 36px, rgba(255,255,255,0.018) 37px)',
+        }} />
 
-        {/* Stars */}
-        {starsReady && (
-          <Particles id="tsparticles-left" particlesLoaded={onParticlesLoaded}
-            options={starsConfig} className="absolute inset-0" />
-        )}
-
-        {/* Very subtle grid texture */}
-        <div className="absolute inset-0 opacity-[0.025]"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+        {/* Beam sweep (framer-motion, repeating) */}
+        <motion.div
+          className="absolute top-0 bottom-0 pointer-events-none z-10"
+          style={{
+            width: 90,
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.055), transparent)',
+            skewX: -12,
+          }}
+          initial={{ x: '-100%' }}
+          animate={{ x: '1300%' }}
+          transition={{
+            duration: 3.5,
+            ease: [0.4, 0, 0.6, 1],
+            repeat: Infinity,
+            repeatDelay: 6,
+            delay: 1.5,
+          }}
+        />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col h-full px-14 py-12">
+        <div className="relative z-10 flex flex-col h-full px-12 py-10">
 
           {/* Logo */}
           <motion.div
-            initial={{ opacity: 0, y: -12 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center gap-3"
+            transition={{ duration: 0.5 }}
           >
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)', boxShadow: '0 0 16px rgba(22,163,74,0.5)' }}>
-              <Logo size={20} withText={false} />
-            </div>
-            <span className="text-white font-bold text-lg tracking-tight">GreenAtlas</span>
+            <Logo size={34} withText={true} textColor="text-white" animateHover={false} />
           </motion.div>
 
-          {/* Radar + headline */}
-          <div className="flex-1 flex flex-col items-center justify-center gap-10">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.8, ease: 'easeOut' }}
-            >
-              <Radar />
-            </motion.div>
-
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.7 }}
-            >
-              <h1 className="text-4xl font-bold text-white leading-tight tracking-tight">
-                Environmental<br />
-                <span className="bg-gradient-to-r from-primary-400 to-emerald-300 bg-clip-text text-transparent">
-                  Intelligence
-                </span>
-              </h1>
-              <p className="text-slate-400 mt-3 text-base leading-relaxed max-w-xs mx-auto">
-                Real-time monitoring of Ifrane Province's forests, water, and air quality.
-              </p>
-            </motion.div>
-
-            {/* Feature chips */}
-            <motion.div
-              className="flex gap-3 flex-wrap justify-center"
+          {/* Headline area */}
+          <div className="flex-1 flex flex-col justify-center">
+            <motion.p
+              className="text-emerald-500 text-xs font-semibold uppercase tracking-[0.15em] mb-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
             >
-              {[
-                { icon: <Flame className="w-3.5 h-3.5" />, label: 'Fire Monitoring',   color: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.25)',   text: '#fca5a5' },
-                { icon: <Droplets className="w-3.5 h-3.5" />, label: 'Water Resources', color: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.25)',  text: '#7dd3fc' },
-                { icon: <TreePine className="w-3.5 h-3.5" />, label: 'Forest Health',  color: 'rgba(34,197,94,0.15)',  border: 'rgba(34,197,94,0.25)',   text: '#86efac' },
-              ].map((f, i) => (
-                <motion.div
-                  key={f.label}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 + i * 0.1 }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold"
-                  style={{ background: f.color, border: `1px solid ${f.border}`, color: f.text }}
-                >
-                  {f.icon}
-                  {f.label}
-                </motion.div>
+              Ifrane Province, Morocco
+            </motion.p>
+
+            {/* BlurText-style headline */}
+            <motion.h1
+              className="text-[3.25rem] font-bold text-white leading-[1.08] tracking-tight mb-6"
+              initial="hidden"
+              animate="show"
+              variants={headlineVariants}
+            >
+              {HEADLINE.map((word) => (
+                <motion.span key={word} className="block" variants={lineVariants}>
+                  {word}
+                </motion.span>
               ))}
-            </motion.div>
+            </motion.h1>
+
+            <motion.p
+              className="text-slate-400 text-base leading-relaxed max-w-xs"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.05, duration: 0.5 }}
+            >
+              Real-time environmental intelligence across Ifrane's forests, water, and air.
+            </motion.p>
           </div>
 
-          {/* Footer */}
-          <motion.p
+          {/* Count-up stats */}
+          <motion.div
+            className="flex gap-10 pt-8"
+            style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="text-slate-600 text-xs"
+            transition={{ delay: 0.5, duration: 0.6 }}
           >
-            Ifrane Province, Morocco 🇲🇦 · Cedar Forest Region
-          </motion.p>
+            {STATS.map((s) => <StatItem key={s.label} {...s} />)}
+          </motion.div>
         </div>
       </div>
 
-      {/* ════════════ RIGHT — FORM PANEL ════════════ */}
-      <div className="flex-1 flex flex-col min-h-screen relative"
-        style={{ background: '#080f0b', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-
+      {/* ── RIGHT PANEL ────────────────────────────── */}
+      <div
+        className="flex-1 flex flex-col"
+        style={{ background: '#07100a', borderLeft: '1px solid rgba(255,255,255,0.05)' }}
+      >
         {/* Top bar */}
         <div className="flex items-center justify-between px-8 pt-6 shrink-0">
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 lg:opacity-0 lg:pointer-events-none">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)' }}>
-              <Logo size={16} withText={false} />
-            </div>
-            <span className="text-white font-bold text-sm">GreenAtlas</span>
+          <div className="lg:opacity-0 lg:pointer-events-none">
+            <Logo size={28} withText={true} textColor="text-white" animateHover={false} />
           </div>
           <LanguageSwitcher />
         </div>
 
-        {/* Form — vertically centered */}
+        {/* Form */}
         <div className="flex-1 flex items-center justify-center px-8 py-10">
           <motion.div
-            className="w-full max-w-sm"
-            initial={{ opacity: 0, y: 24 }}
+            className="w-full max-w-[360px]"
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           >
-            {/* Heading */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-white mb-1.5">{t('auth.welcome')}</h2>
+              <h2 className="text-[1.6rem] font-bold text-white mb-1.5">{t('auth.welcome')}</h2>
               <p className="text-slate-500 text-sm">{t('auth.signInSubtitle')}</p>
             </div>
 
-            {/* Error */}
             <AnimatePresence>
               {error && (
                 <motion.div
                   initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                  animate={{ opacity: 1, height: 'auto', marginBottom: 16 }}
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-2xl overflow-hidden"
+                  className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20
+                             text-red-400 text-sm px-4 py-3 rounded-lg overflow-hidden"
                 >
-                  <span className="shrink-0 text-base">⚠️</span>
+                  <span className="shrink-0">&#9888;</span>
                   <span>{error}</span>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <motion.form
+              onSubmit={handleSubmit}
+              className="space-y-5"
+              variants={formVariants}
+              initial="hidden"
+              animate="show"
+            >
               {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <motion.div variants={fieldVariants}>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
                   {t('auth.email')}
                 </label>
                 <input
@@ -338,21 +267,17 @@ const Login: React.FC = () => {
                   placeholder="you@greenatlas.ma"
                   required
                   autoComplete="email"
-                  className="w-full px-4 py-3.5 rounded-2xl text-sm text-white placeholder-slate-600
-                             transition-all duration-200 outline-none
-                             focus:ring-2 focus:ring-primary-500/40"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                  onFocus={e => { e.currentTarget.style.border = '1px solid rgba(34,197,94,0.45)'; e.currentTarget.style.background = 'rgba(34,197,94,0.05)'; }}
-                  onBlur={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  className="w-full px-3.5 py-3 rounded-lg text-sm text-white placeholder-slate-600
+                             outline-none transition-colors duration-150"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#22c55e'; e.currentTarget.style.background = 'rgba(34,197,94,0.04)'; }}
+                  onBlur={e  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                 />
-              </div>
+              </motion.div>
 
               {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <motion.div variants={fieldVariants}>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
                   {t('auth.password')}
                 </label>
                 <div className="relative">
@@ -360,103 +285,58 @@ const Login: React.FC = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     required
                     autoComplete="current-password"
-                    className="w-full px-4 py-3.5 pr-12 rounded-2xl text-sm text-white placeholder-slate-600
-                               transition-all duration-200 outline-none
-                               focus:ring-2 focus:ring-primary-500/40"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                    }}
-                    onFocus={e => { e.currentTarget.style.border = '1px solid rgba(34,197,94,0.45)'; e.currentTarget.style.background = 'rgba(34,197,94,0.05)'; }}
-                    onBlur={e => { e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    className="w-full px-3.5 py-3 pr-11 rounded-lg text-sm text-white placeholder-slate-600
+                               outline-none transition-colors duration-150"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#22c55e'; e.currentTarget.style.background = 'rgba(34,197,94,0.04)'; }}
+                    onBlur={e  => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                   />
-                  <button type="button" onClick={() => setShowPassword(p => !p)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(p => !p)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* Submit */}
-              <motion.button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 mt-2 rounded-2xl font-semibold text-sm text-white
-                           flex items-center justify-center gap-2
-                           disabled:opacity-50 disabled:cursor-not-allowed
-                           focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                style={{
-                  background: isLoading
-                    ? 'rgba(22,163,74,0.4)'
-                    : 'linear-gradient(135deg, #16a34a 0%, #0d9144 100%)',
-                  boxShadow: isLoading ? 'none' : '0 0 24px rgba(22,163,74,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
-                }}
-                whileHover={!isLoading ? { scale: 1.015 } : {}}
-                whileTap={!isLoading ? { scale: 0.985 } : {}}
-              >
-                {isLoading ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    {t('auth.signIn')}
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </motion.button>
-            </form>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-white/[0.06]" />
-              <span className="text-xs text-slate-600 uppercase tracking-widest">demo</span>
-              <div className="flex-1 h-px bg-white/[0.06]" />
-            </div>
-
-            {/* Demo credentials */}
-            <div className="flex gap-2">
-              {demos.map((d, i) => (
-                <motion.button
-                  key={d.role}
-                  type="button"
-                  onClick={() => { setEmail(d.email); setPassword(d.pwd); }}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.08 }}
-                  whileHover={{ scale: 1.04, y: -1 }}
-                  whileTap={{ scale: 0.96 }}
-                  className="flex-1 flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl
-                             transition-colors cursor-pointer"
-                  style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = `${d.color}12`; (e.currentTarget as HTMLElement).style.borderColor = `${d.color}35`; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)'; }}
+              {/* Submit — shimmer button */}
+              <motion.div variants={fieldVariants}>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn-shimmer w-full py-3 rounded-lg font-semibold text-sm text-white
+                             flex items-center justify-center gap-2
+                             disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className="text-xl">{d.icon}</span>
-                  <span className="text-xs font-semibold" style={{ color: d.color }}>{d.role}</span>
-                </motion.button>
-              ))}
-            </div>
-            <p className="text-center text-[11px] text-slate-700 mt-2.5">Click to auto-fill</p>
+                  {isLoading
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : t('auth.signIn')
+                  }
+                </button>
+              </motion.div>
+            </motion.form>
 
-            {/* Register link */}
-            <p className="text-center text-sm text-slate-600 mt-6">
+            <motion.p
+              className="text-center text-sm text-slate-600 mt-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
               {t('auth.noAccount')}{' '}
-              <Link to="/register"
-                className="text-primary-500 hover:text-primary-400 font-semibold transition-colors">
+              <Link to="/register" className="text-emerald-500 hover:text-emerald-400 transition-colors font-medium">
                 {t('auth.registerLink')}
               </Link>
-            </p>
+            </motion.p>
           </motion.div>
         </div>
 
-        {/* Bottom bar */}
-        <p className="text-center text-[11px] text-slate-800 pb-5 px-8">
-          © 2024 GreenAtlas Ifrane · Environmental Monitoring Platform
+        <p className="text-center text-[11px] text-slate-800 pb-5">
+          &copy; 2025 GreenAtlas &middot; Ifrane Province
         </p>
       </div>
     </div>

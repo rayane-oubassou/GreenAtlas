@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, Link, useNavigate, NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, X, ArrowRight,
   LayoutDashboard, Map, AlertTriangle, Droplets, TreePine,
-  Users2, Settings2, User, Trophy, Leaf,
+  Users2, Settings2, User, Trophy, Leaf, Activity,
 } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
@@ -17,18 +17,20 @@ const ease = [0.16, 1, 0.3, 1] as [number, number, number, number];
 type PageIcon = React.ElementType;
 
 const pageMeta: Record<string, { title: string; sub: string; Icon: PageIcon }> = {
-  '/':             { title: 'Dashboard',       sub: 'Environmental overview',  Icon: LayoutDashboard },
-  '/map':          { title: 'Live Map',         sub: 'Real-time incidents',     Icon: Map             },
-  '/report/new':   { title: 'Report Incident',  sub: 'Submit new report',       Icon: AlertTriangle   },
-  '/water':        { title: 'Water Resources',  sub: 'Levels & availability',   Icon: Droplets        },
-  '/forest':       { title: 'Forest Monitor',   sub: 'Fire risk & health',      Icon: TreePine        },
-  '/users':        { title: 'Users',            sub: 'Manage platform members', Icon: Users2          },
-  '/admin':        { title: 'Admin Panel',      sub: 'Analytics & management',  Icon: Settings2       },
-  '/profile':      { title: 'My Profile',       sub: 'Account settings',        Icon: User            },
-  '/leaderboard':  { title: 'Leaderboard',      sub: 'Top contributors',        Icon: Trophy          },
+  '/':             { title: 'Dashboard',        sub: 'Environmental overview',  Icon: LayoutDashboard },
+  '/map':          { title: 'Live Map',          sub: 'Real-time incidents',     Icon: Map             },
+  '/report/new':   { title: 'Report Incident',   sub: 'Submit new report',       Icon: AlertTriangle   },
+  '/water':        { title: 'Water Resources',   sub: 'Levels & availability',   Icon: Droplets        },
+  '/forest':       { title: 'Forest Monitor',    sub: 'Fire risk & health',      Icon: TreePine        },
+  '/users':        { title: 'Users',             sub: 'Manage platform members', Icon: Users2          },
+  '/admin':        { title: 'Admin Panel',       sub: 'Analytics & management',  Icon: Settings2       },
+  '/profile':      { title: 'My Profile',        sub: 'Account settings',        Icon: User            },
+  '/leaderboard':  { title: 'Leaderboard',       sub: 'Top contributors',        Icon: Trophy          },
+  '/pulse':        { title: 'Ecosystem Pulse',   sub: 'Live ambient monitoring', Icon: Activity        },
 };
 
 interface Page { path: string; label: string; Icon: PageIcon; roles?: string[] }
+
 const allPages: Page[] = [
   { path: '/',            label: 'Dashboard',      Icon: LayoutDashboard },
   { path: '/map',         label: 'Live Map',        Icon: Map             },
@@ -36,9 +38,20 @@ const allPages: Page[] = [
   { path: '/water',       label: 'Water Resources', Icon: Droplets        },
   { path: '/forest',      label: 'Forest Monitor',  Icon: TreePine        },
   { path: '/leaderboard', label: 'Leaderboard',     Icon: Trophy          },
-  { path: '/profile',     label: 'My Profile',       Icon: User            },
-  { path: '/users',       label: 'Users',            Icon: Users2,  roles: ['admin','agent'] },
-  { path: '/admin',       label: 'Admin Panel',      Icon: Settings2, roles: ['admin'] },
+  { path: '/pulse',       label: 'Ecosystem Pulse', Icon: Activity        },
+  { path: '/profile',     label: 'My Profile',      Icon: User            },
+  { path: '/users',       label: 'Users',           Icon: Users2,    roles: ['admin','agent'] },
+  { path: '/admin',       label: 'Admin Panel',     Icon: Settings2, roles: ['admin'] },
+];
+
+/* Items shown in the secondary nav strip (main pages only) */
+const primaryNav: Page[] = [
+  { path: '/',            label: 'Dashboard',  Icon: LayoutDashboard },
+  { path: '/map',         label: 'Live Map',   Icon: Map             },
+  { path: '/water',       label: 'Water',      Icon: Droplets        },
+  { path: '/forest',      label: 'Forest',     Icon: TreePine        },
+  { path: '/leaderboard', label: 'Leaderboard',Icon: Trophy          },
+  { path: '/pulse',       label: 'Pulse',      Icon: Activity        },
 ];
 
 const Navbar: React.FC = () => {
@@ -51,6 +64,7 @@ const Navbar: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query,      setQuery]      = useState('');
   const [activeIdx,  setActiveIdx]  = useState(0);
+  const [scrolled,   setScrolled]   = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef  = useRef<HTMLInputElement>(null);
 
@@ -59,22 +73,26 @@ const Navbar: React.FC = () => {
     ? pages.filter(p => p.label.toLowerCase().includes(query.toLowerCase()))
     : pages;
 
+  /* Scroll detection for border intensity */
+  useEffect(() => {
+    const el = document.querySelector('main');
+    if (!el) return;
+    const handler = () => setScrolled(el.scrollTop > 10);
+    el.addEventListener('scroll', handler, { passive: true });
+    return () => el.removeEventListener('scroll', handler);
+  }, []);
+
   const openSearch = useCallback(() => {
-    setSearchOpen(true);
-    setQuery('');
-    setActiveIdx(0);
+    setSearchOpen(true); setQuery(''); setActiveIdx(0);
     setTimeout(() => inputRef.current?.focus(), 40);
   }, []);
 
   const closeSearch = useCallback(() => {
-    setSearchOpen(false);
-    setQuery('');
-    setActiveIdx(0);
+    setSearchOpen(false); setQuery(''); setActiveIdx(0);
   }, []);
 
   const goTo = useCallback((path: string) => {
-    navigate(path);
-    closeSearch();
+    navigate(path); closeSearch();
   }, [navigate, closeSearch]);
 
   useEffect(() => {
@@ -107,164 +125,233 @@ const Navbar: React.FC = () => {
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease }}
-      className="h-[60px] shrink-0 sticky top-0 z-40 flex items-center
-                 bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl
-                 border-b border-slate-200/70 dark:border-slate-800/80
-                 transition-colors duration-300"
+      className="shrink-0 sticky top-0 z-40 transition-colors duration-300"
+      style={{
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: scrolled
+          ? '1px solid rgba(148,163,184,0.25)'
+          : '1px solid rgba(148,163,184,0.12)',
+        boxShadow: scrolled ? '0 1px 12px rgba(0,0,0,0.06)' : 'none',
+      }}
     >
       {/* Subtle bottom glow */}
-      <div className="absolute bottom-0 left-0 right-0 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent 10%, rgba(34,197,94,0.15) 50%, transparent 90%)' }} />
+      <div className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: 'linear-gradient(90deg, transparent 10%, rgba(34,197,94,0.18) 50%, transparent 90%)' }} />
 
-      {/* ── LEFT: brand mark ────────────────────────────────────── */}
-      <div className="w-14 flex items-center justify-center shrink-0">
-        <Link to="/" className="w-8 h-8 rounded-xl flex items-center justify-center transition-opacity hover:opacity-80"
-          style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)' }}>
-          <Leaf className="w-4 h-4 text-white" />
-        </Link>
-      </div>
+      {/* ── MAIN BAR ─────────────────────────────────────────────── */}
+      <div className="h-[60px] flex items-center">
 
-      {/* ── CENTER: page title ───────────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0 px-4">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: 0.2, ease }}
-            className="flex items-center gap-2"
-          >
-            {MetaIcon && (
-              <MetaIcon className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
-            )}
-            <span className="text-[15px] font-semibold text-slate-800 dark:text-slate-100 leading-tight">
-              {meta?.title ?? 'GreenAtlas'}
-            </span>
-          </motion.div>
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-          <motion.p
-            key={`sub-${pathname}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease }}
-            className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight"
-          >
-            {meta?.sub ?? ''}
-          </motion.p>
-        </AnimatePresence>
-      </div>
+        {/* LEFT: brand */}
+        <div className="w-14 flex items-center justify-center shrink-0">
+          <Link to="/" className="w-8 h-8 rounded-xl flex items-center justify-center transition-opacity hover:opacity-80"
+            style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)' }}>
+            <Leaf className="w-4 h-4 text-white" />
+          </Link>
+        </div>
 
-      {/* ── RIGHT: search + controls ─────────────────────────────── */}
-      <div className="flex items-center gap-1 pr-3 shrink-0">
-
-        {/* Search icon button + palette */}
-        <div ref={searchRef} className="relative">
-          <motion.button
-            onClick={openSearch}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="Search  ⌘K"
-            className="w-8 h-8 rounded-xl flex items-center justify-center
-                       text-slate-400 dark:text-slate-500
-                       hover:bg-slate-100 dark:hover:bg-slate-800
-                       hover:text-slate-600 dark:hover:text-slate-300
-                       transition-all duration-150"
-          >
-            <Search className="w-4 h-4" />
-          </motion.button>
-
-          <AnimatePresence>
-            {searchOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                transition={{ duration: 0.18, ease }}
-                className="absolute top-[calc(100%+10px)] right-0 w-80 z-50 rounded-2xl overflow-hidden
-                           bg-white dark:bg-slate-900
-                           border border-slate-200 dark:border-slate-700/60
-                           shadow-2xl shadow-black/10 dark:shadow-black/40"
-              >
-                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                  <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <input
-                    ref={inputRef}
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    placeholder="Search pages…"
-                    className="flex-1 text-sm bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none"
-                  />
-                  {query && (
-                    <button onClick={() => setQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                  <kbd className="text-[10px] font-mono text-slate-300 dark:text-slate-600">ESC</kbd>
-                </div>
-
-                <div className="py-1.5 max-h-64 overflow-y-auto">
-                  {results.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-6">No results</p>
-                  ) : (
-                    <>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 pb-1.5">
-                        {query ? 'Results' : 'Jump to'}
-                      </p>
-                      {results.map((page, i) => (
-                        <motion.button
-                          key={page.path}
-                          onClick={() => goTo(page.path)}
-                          onMouseEnter={() => setActiveIdx(i)}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors
-                                     ${i === activeIdx
-                                       ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
-                          initial={{ opacity: 0, x: -4 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.025 }}
-                        >
-                          <page.Icon className="w-4 h-4 shrink-0 opacity-60" />
-                          <span className="flex-1 font-medium truncate">{page.label}</span>
-                          <ArrowRight className={`w-3.5 h-3.5 shrink-0 transition-opacity ${i === activeIdx ? 'opacity-100' : 'opacity-0'}`} />
-                        </motion.button>
-                      ))}
-                    </>
-                  )}
-                </div>
-
-                <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400">
-                    <kbd className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">↑↓</kbd> navigate
-                    <span className="mx-1.5">·</span>
-                    <kbd className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">↵</kbd> open
-                  </span>
-                </div>
-              </motion.div>
-            )}
+        {/* CENTER: page title */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0 px-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.2, ease }}
+              className="flex items-center gap-2"
+            >
+              {MetaIcon && (
+                <MetaIcon className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+              )}
+              <span className="text-[15px] font-semibold text-slate-800 dark:text-slate-100 leading-tight">
+                {meta?.title ?? 'GreenAtlas'}
+              </span>
+            </motion.div>
+          </AnimatePresence>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={`sub-${pathname}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease }}
+              className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight"
+            >
+              {meta?.sub ?? ''}
+            </motion.p>
           </AnimatePresence>
         </div>
 
-        <ThemeToggle />
-        <LanguageSwitcher />
-        <NotificationBell />
+        {/* RIGHT: controls */}
+        <div className="flex items-center gap-1 pr-3 shrink-0">
 
-        {user && (
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
-            <Link to="/profile" className="flex items-center gap-2 pl-1">
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight">{user.name.split(' ')[0]}</span>
-                <span className="text-[10px] capitalize text-slate-400 leading-tight">{user.role}</span>
-              </div>
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold ring-2 ring-primary-500/20"
-                style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)' }}>
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-            </Link>
-          </motion.div>
-        )}
+          {/* Search */}
+          <div ref={searchRef} className="relative">
+            <motion.button
+              onClick={openSearch}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Search  ⌘K"
+              className="w-8 h-8 rounded-xl flex items-center justify-center
+                         text-slate-400 dark:text-slate-500
+                         hover:bg-slate-100 dark:hover:bg-slate-800
+                         hover:text-slate-600 dark:hover:text-slate-300
+                         transition-all duration-150"
+            >
+              <Search className="w-4 h-4" />
+            </motion.button>
+
+            <AnimatePresence>
+              {searchOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                  transition={{ duration: 0.18, ease }}
+                  className="absolute top-[calc(100%+10px)] right-0 w-80 z-50 rounded-2xl overflow-hidden
+                             bg-white dark:bg-slate-900
+                             border border-slate-200 dark:border-slate-700/60
+                             shadow-2xl shadow-black/10 dark:shadow-black/40"
+                >
+                  <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                    <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <input
+                      ref={inputRef}
+                      value={query}
+                      onChange={e => setQuery(e.target.value)}
+                      placeholder="Search pages…"
+                      className="flex-1 text-sm bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none"
+                    />
+                    {query && (
+                      <button onClick={() => setQuery('')} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <kbd className="text-[10px] font-mono text-slate-300 dark:text-slate-600">ESC</kbd>
+                  </div>
+
+                  <div className="py-1.5 max-h-64 overflow-y-auto">
+                    {results.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-6">No results</p>
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 pb-1.5">
+                          {query ? 'Results' : 'Jump to'}
+                        </p>
+                        {results.map((page, i) => (
+                          <motion.button
+                            key={page.path}
+                            onClick={() => goTo(page.path)}
+                            onMouseEnter={() => setActiveIdx(i)}
+                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors
+                                       ${i === activeIdx
+                                         ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+                            initial={{ opacity: 0, x: -4 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.025 }}
+                          >
+                            <page.Icon className="w-4 h-4 shrink-0 opacity-60" />
+                            <span className="flex-1 font-medium truncate">{page.label}</span>
+                            <ArrowRight className={`w-3.5 h-3.5 shrink-0 transition-opacity ${i === activeIdx ? 'opacity-100' : 'opacity-0'}`} />
+                          </motion.button>
+                        ))}
+                      </>
+                    )}
+                  </div>
+
+                  <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400">
+                      <kbd className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">↑↓</kbd> navigate
+                      <span className="mx-1.5">·</span>
+                      <kbd className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">↵</kbd> open
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <ThemeToggle />
+          <LanguageSwitcher />
+          <NotificationBell />
+
+          {user && (
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
+              <Link to="/profile" className="flex items-center gap-2 pl-1">
+                <div className="hidden sm:flex flex-col items-end">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight">{user.name.split(' ')[0]}</span>
+                  <span className="text-[10px] capitalize text-slate-400 leading-tight">{user.role}</span>
+                </div>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-xs font-bold ring-2 ring-primary-500/20"
+                  style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)' }}>
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              </Link>
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* ── SECONDARY NAV STRIP ──────────────────────────────────── */}
+      <div className="hidden lg:block border-t border-slate-100 dark:border-slate-800/60">
+        <nav className="flex items-center w-full">
+          {primaryNav.map((item, i) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className="flex-1 flex justify-center"
+            >
+              {({ isActive }) => (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06, duration: 0.35, ease }}
+                  whileHover={{ y: -1 }}
+                  className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold cursor-pointer select-none rounded-lg transition-colors duration-150 group
+                    ${isActive
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                >
+                  {/* Hover/active background pill */}
+                  <motion.span
+                    layoutId={isActive ? 'nav-active-bg' : undefined}
+                    className={`absolute inset-0 rounded-lg ${
+                      isActive
+                        ? 'bg-primary-50 dark:bg-primary-900/20'
+                        : 'bg-transparent group-hover:bg-slate-100 dark:group-hover:bg-slate-800/50'
+                    }`}
+                    transition={{ duration: 0.22, ease }}
+                  />
+
+                  <motion.span
+                    animate={{ scale: isActive ? 1.1 : 1 }}
+                    transition={{ duration: 0.2, ease }}
+                    className="relative z-10"
+                  >
+                    <item.Icon className="w-3.5 h-3.5 shrink-0" />
+                  </motion.span>
+                  <span className="relative z-10">{item.label}</span>
+
+                  {/* Sliding underline indicator */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-strip-underline"
+                      className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full"
+                      style={{ background: 'linear-gradient(90deg,#16a34a,#22c55e)' }}
+                      initial={false}
+                      transition={{ duration: 0.28, ease }}
+                    />
+                  )}
+                </motion.div>
+              )}
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </motion.header>
   );

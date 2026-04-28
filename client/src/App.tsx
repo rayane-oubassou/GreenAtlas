@@ -24,6 +24,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import UsersPage from './pages/UsersPage';
 import Leaderboard from './pages/Leaderboard';
+import EcosystemPulse from './pages/EcosystemPulse';
 
 const pageVariants = {
   initial: { opacity: 0, y: 14, filter: 'blur(4px)' },
@@ -87,6 +88,7 @@ const AppShell: React.FC = () => {
               <Route path="/forest"      element={<PageAnim><ForestMonitoring /></PageAnim>} />
               <Route path="/profile"     element={<PageAnim><Profile /></PageAnim>} />
               <Route path="/leaderboard" element={<PageAnim><Leaderboard /></PageAnim>} />
+              <Route path="/pulse"       element={<PageAnim><EcosystemPulse /></PageAnim>} />
               <Route path="/users"       element={<RoleGuard roles={['admin','agent']}><PageAnim><UsersPage /></PageAnim></RoleGuard>} />
               <Route path="/admin"       element={<RoleGuard roles={['admin']}><PageAnim><AdminDashboard /></PageAnim></RoleGuard>} />
               <Route path="*"            element={<Navigate to="/" replace />} />
