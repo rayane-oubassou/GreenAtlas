@@ -1,11 +1,15 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import {
+  BrowserRouter as Router, Routes, Route, Navigate,
+  useLocation,
+} from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
-import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
+import { UserRole } from './types';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 
@@ -22,71 +26,105 @@ import UsersPage from './pages/UsersPage';
 import Leaderboard from './pages/Leaderboard';
 
 const pageVariants = {
-  initial: { opacity: 0, y: 18, filter: 'blur(3px)' },
+  initial: { opacity: 0, y: 14, filter: 'blur(4px)' },
   animate: { opacity: 1, y: 0,  filter: 'blur(0px)' },
-  exit:    { opacity: 0, y: -10, filter: 'blur(3px)' },
+  exit:    { opacity: 0, y: -8, filter: 'blur(4px)' },
+};
+const pageTransition = { duration: 0.28, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
+
+/* Lightweight role check — auth check already happened in AppShell */
+const RoleGuard: React.FC<{ roles: UserRole[]; children: React.ReactNode }> = ({ roles, children }) => {
+  const { user } = useAuth();
+  if (user && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
 };
 
-const pageTransition = { duration: 0.32, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] };
+const PageAnim: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <motion.div
+    variants={pageVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={pageTransition}
+  >
+    {children}
+  </motion.div>
+);
 
-const AppLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
-    <Sidebar />
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-      <Navbar />
-      <main className="flex-1 overflow-y-auto p-6">
-        {children}
-      </main>
+/* Single persistent shell — Sidebar and Navbar mount ONCE and never remount */
+const AppShell: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950">
+        <motion.div
+          className="w-9 h-9 rounded-full border-[3px] border-primary-600 border-t-transparent"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
+        />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return (
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors duration-300">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Navbar />
+        <main className="flex-1 overflow-y-auto p-6">
+          <AnimatePresence mode="wait" initial={false}>
+            <Routes location={location} key={location.pathname}>
+              <Route path="/"            element={<PageAnim><Dashboard /></PageAnim>} />
+              <Route path="/map"         element={<PageAnim><MapPage /></PageAnim>} />
+              <Route path="/report/new"  element={<PageAnim><ReportForm /></PageAnim>} />
+              <Route path="/water"       element={<PageAnim><WaterMonitoring /></PageAnim>} />
+              <Route path="/forest"      element={<PageAnim><ForestMonitoring /></PageAnim>} />
+              <Route path="/profile"     element={<PageAnim><Profile /></PageAnim>} />
+              <Route path="/leaderboard" element={<PageAnim><Leaderboard /></PageAnim>} />
+              <Route path="/users"       element={<RoleGuard roles={['admin','agent']}><PageAnim><UsersPage /></PageAnim></RoleGuard>} />
+              <Route path="/admin"       element={<RoleGuard roles={['admin']}><PageAnim><AdminDashboard /></PageAnim></RoleGuard>} />
+              <Route path="*"            element={<Navigate to="/" replace />} />
+            </Routes>
+          </AnimatePresence>
+        </main>
+      </div>
     </div>
-  </div>
+  );
+};
+
+const ToasterConfig: React.FC = () => (
+  <Toaster
+    position="top-right"
+    toastOptions={{
+      duration: 3500,
+      style: { borderRadius: '12px', fontSize: '13px', fontWeight: 500 },
+      success: { style: { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' } },
+      error:   { style: { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' } },
+    }}
+  />
 );
 
-const Wrap: React.FC<{ children: React.ReactNode; roles?: ('admin'|'agent'|'citizen')[] }> = ({ children, roles }) => (
-  <ProtectedRoute allowedRoles={roles}>
-    <AppLayout>
-      <motion.div
-        variants={pageVariants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={pageTransition}
-      >
-        {children}
-      </motion.div>
-    </AppLayout>
-  </ProtectedRoute>
-);
-
-/* Needs useLocation so must be a child of Router */
 const InnerApp: React.FC = () => {
   const location = useLocation();
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+
   return (
     <>
-      <AnimatePresence mode="wait" initial={false}>
-        <Routes location={location} key={location.pathname}>
-          <Route path="/login"      element={<Login />} />
-          <Route path="/register"   element={<Register />} />
-          <Route path="/"           element={<Wrap><Dashboard /></Wrap>} />
-          <Route path="/map"        element={<Wrap><MapPage /></Wrap>} />
-          <Route path="/report/new" element={<Wrap><ReportForm /></Wrap>} />
-          <Route path="/water"      element={<Wrap><WaterMonitoring /></Wrap>} />
-          <Route path="/forest"     element={<Wrap><ForestMonitoring /></Wrap>} />
-          <Route path="/profile"     element={<Wrap><Profile /></Wrap>} />
-          <Route path="/leaderboard" element={<Wrap><Leaderboard /></Wrap>} />
-          <Route path="/users"      element={<Wrap roles={['admin','agent']}><UsersPage /></Wrap>} />
-          <Route path="/admin"      element={<Wrap roles={['admin']}><AdminDashboard /></Wrap>} />
-          <Route path="*"           element={<Navigate to="/" replace />} />
+      {isAuthPage ? (
+        <Routes>
+          <Route path="/login"    element={<Login />} />
+          <Route path="/register" element={<Register />} />
         </Routes>
-      </AnimatePresence>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3500,
-          style: { borderRadius: '12px', fontSize: '13px', fontWeight: 500 },
-          success: { style: { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' } },
-          error:   { style: { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' } },
-        }}
-      />
+      ) : (
+        <AppShell />
+      )}
+      <ToasterConfig />
     </>
   );
 };

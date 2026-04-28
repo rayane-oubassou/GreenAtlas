@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, ArrowRight } from 'lucide-react';
+import {
+  Search, X, ArrowRight,
+  LayoutDashboard, Map, AlertTriangle, Droplets, TreePine,
+  Users2, Settings2, User, Trophy, Leaf,
+} from 'lucide-react';
 import NotificationBell from './NotificationBell';
 import ThemeToggle from './ThemeToggle';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -10,29 +14,31 @@ import { useAuth } from '../context/AuthContext';
 
 const ease = [0.16, 1, 0.3, 1] as [number, number, number, number];
 
-const pageMeta: Record<string, { title: string; sub: string; emoji: string; color: string }> = {
-  '/':             { title: 'Dashboard',        sub: 'Environmental overview',    emoji: '🌍', color: 'from-slate-500 to-slate-600' },
-  '/map':          { title: 'Live Map',          sub: 'Real-time incidents',       emoji: '🗺️', color: 'from-blue-500 to-indigo-600' },
-  '/report/new':   { title: 'Report Incident',   sub: 'Submit new report',         emoji: '⚠️', color: 'from-amber-500 to-orange-600' },
-  '/water':        { title: 'Water Resources',   sub: 'Levels & availability',     emoji: '💧', color: 'from-cyan-500 to-blue-600' },
-  '/forest':       { title: 'Forest Monitor',    sub: 'Fire risk & health',        emoji: '🌲', color: 'from-primary-500 to-emerald-600' },
-  '/users':        { title: 'Users',             sub: 'Manage platform members',   emoji: '👥', color: 'from-violet-500 to-purple-600' },
-  '/admin':        { title: 'Admin Panel',       sub: 'Analytics & management',    emoji: '⚙️', color: 'from-rose-500 to-red-600' },
-  '/profile':      { title: 'My Profile',        sub: 'Account settings',          emoji: '👤', color: 'from-teal-500 to-emerald-600' },
-  '/leaderboard':  { title: 'Leaderboard',       sub: 'Top contributors',          emoji: '🏆', color: 'from-yellow-500 to-amber-600' },
+type PageIcon = React.ElementType;
+
+const pageMeta: Record<string, { title: string; sub: string; Icon: PageIcon }> = {
+  '/':             { title: 'Dashboard',       sub: 'Environmental overview',  Icon: LayoutDashboard },
+  '/map':          { title: 'Live Map',         sub: 'Real-time incidents',     Icon: Map             },
+  '/report/new':   { title: 'Report Incident',  sub: 'Submit new report',       Icon: AlertTriangle   },
+  '/water':        { title: 'Water Resources',  sub: 'Levels & availability',   Icon: Droplets        },
+  '/forest':       { title: 'Forest Monitor',   sub: 'Fire risk & health',      Icon: TreePine        },
+  '/users':        { title: 'Users',            sub: 'Manage platform members', Icon: Users2          },
+  '/admin':        { title: 'Admin Panel',      sub: 'Analytics & management',  Icon: Settings2       },
+  '/profile':      { title: 'My Profile',       sub: 'Account settings',        Icon: User            },
+  '/leaderboard':  { title: 'Leaderboard',      sub: 'Top contributors',        Icon: Trophy          },
 };
 
-interface Page { path: string; label: string; emoji: string; roles?: string[] }
+interface Page { path: string; label: string; Icon: PageIcon; roles?: string[] }
 const allPages: Page[] = [
-  { path: '/',           label: 'Dashboard',       emoji: '🌍' },
-  { path: '/map',        label: 'Live Map',         emoji: '🗺️' },
-  { path: '/report/new', label: 'New Report',       emoji: '⚠️' },
-  { path: '/water',      label: 'Water Resources',  emoji: '💧' },
-  { path: '/forest',     label: 'Forest Monitor',   emoji: '🌲' },
-  { path: '/profile',    label: 'My Profile',        emoji: '👤' },
-  { path: '/leaderboard', label: 'Leaderboard',       emoji: '🏆' },
-  { path: '/users',       label: 'Users',             emoji: '👥', roles: ['admin','agent'] },
-  { path: '/admin',       label: 'Admin Panel',       emoji: '⚙️', roles: ['admin'] },
+  { path: '/',            label: 'Dashboard',      Icon: LayoutDashboard },
+  { path: '/map',         label: 'Live Map',        Icon: Map             },
+  { path: '/report/new',  label: 'New Report',      Icon: AlertTriangle   },
+  { path: '/water',       label: 'Water Resources', Icon: Droplets        },
+  { path: '/forest',      label: 'Forest Monitor',  Icon: TreePine        },
+  { path: '/leaderboard', label: 'Leaderboard',     Icon: Trophy          },
+  { path: '/profile',     label: 'My Profile',       Icon: User            },
+  { path: '/users',       label: 'Users',            Icon: Users2,  roles: ['admin','agent'] },
+  { path: '/admin',       label: 'Admin Panel',      Icon: Settings2, roles: ['admin'] },
 ];
 
 const Navbar: React.FC = () => {
@@ -42,11 +48,11 @@ const Navbar: React.FC = () => {
   const navigate     = useNavigate();
   const meta         = pageMeta[pathname];
 
-  const [searchOpen,  setSearchOpen]  = useState(false);
-  const [query,       setQuery]       = useState('');
-  const [activeIdx,   setActiveIdx]   = useState(0);
-  const searchRef  = useRef<HTMLDivElement>(null);
-  const inputRef   = useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query,      setQuery]      = useState('');
+  const [activeIdx,  setActiveIdx]  = useState(0);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef  = useRef<HTMLInputElement>(null);
 
   const pages = allPages.filter(p => !p.roles || (user && p.roles.includes(user.role)));
   const results = query.trim()
@@ -71,7 +77,6 @@ const Navbar: React.FC = () => {
     closeSearch();
   }, [navigate, closeSearch]);
 
-  /* Keyboard shortcuts */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
@@ -85,7 +90,6 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [searchOpen, results, activeIdx, openSearch, closeSearch, goTo]);
 
-  /* Click outside to close */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) closeSearch();
@@ -94,94 +98,103 @@ const Navbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, [closeSearch]);
 
-  /* Reset idx when results change */
   useEffect(() => { setActiveIdx(0); }, [query]);
+
+  const MetaIcon = meta?.Icon;
 
   return (
     <motion.header
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease }}
-      className="h-[68px] shrink-0 sticky top-0 z-40 flex items-center gap-4 px-6
-                 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl
-                 border-b border-slate-200/60 dark:border-slate-800/80
+      transition={{ duration: 0.35, ease }}
+      className="h-[60px] shrink-0 sticky top-0 z-40 flex items-center
+                 bg-white/90 dark:bg-slate-900/95 backdrop-blur-xl
+                 border-b border-slate-200/70 dark:border-slate-800/80
                  transition-colors duration-300"
     >
-      {/* Subtle bottom glow line */}
-      <div className="absolute bottom-0 left-1/4 right-1/4 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(34,197,94,0.2), transparent)' }} />
+      {/* Subtle bottom glow */}
+      <div className="absolute bottom-0 left-0 right-0 h-px"
+        style={{ background: 'linear-gradient(90deg, transparent 10%, rgba(34,197,94,0.15) 50%, transparent 90%)' }} />
 
-      {/* ── LEFT: Page context ────────────────────────────────── */}
-      <div className="flex-1 flex items-center gap-3 min-w-0">
+      {/* ── LEFT: brand mark ────────────────────────────────────── */}
+      <div className="w-14 flex items-center justify-center shrink-0">
+        <Link to="/" className="w-8 h-8 rounded-xl flex items-center justify-center transition-opacity hover:opacity-80"
+          style={{ background: 'linear-gradient(135deg,#16a34a,#0d9144)' }}>
+          <Leaf className="w-4 h-4 text-white" />
+        </Link>
+      </div>
+
+      {/* ── CENTER: page title ───────────────────────────────────── */}
+      <div className="flex-1 flex flex-col items-center justify-center text-center min-w-0 px-4">
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.28, ease }}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 bg-gradient-to-br ${meta?.color ?? 'from-slate-400 to-slate-500'}`}
-          >{meta?.emoji ?? '🌿'}</motion.div>
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.2, ease }}
+            className="flex items-center gap-2"
+          >
+            {MetaIcon && (
+              <MetaIcon className="w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0" />
+            )}
+            <span className="text-[15px] font-semibold text-slate-800 dark:text-slate-100 leading-tight">
+              {meta?.title ?? 'GreenAtlas'}
+            </span>
+          </motion.div>
         </AnimatePresence>
-
-        <div className="min-w-0">
-          <AnimatePresence mode="wait">
-            <motion.h1
-              key={`h-${pathname}`}
-              initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.22, ease }}
-              className="text-[15px] font-bold text-slate-800 dark:text-slate-100 leading-tight truncate"
-            >{meta?.title ?? 'GreenAtlas'}</motion.h1>
-          </AnimatePresence>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight truncate">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={`sub-${pathname}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease }}
+            className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight"
+          >
             {meta?.sub ?? ''}
-          </p>
-        </div>
+          </motion.p>
+        </AnimatePresence>
       </div>
 
-      {/* ── CENTER: Search / Command palette ─────────────────── */}
-      <div className="flex-1 flex justify-center">
-        <div ref={searchRef} className="relative w-full max-w-[340px]">
-          {/* Trigger bar */}
+      {/* ── RIGHT: search + controls ─────────────────────────────── */}
+      <div className="flex items-center gap-1 pr-3 shrink-0">
+
+        {/* Search icon button + palette */}
+        <div ref={searchRef} className="relative">
           <motion.button
             onClick={openSearch}
-            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            title="Search  ⌘K"
+            className="w-8 h-8 rounded-xl flex items-center justify-center
                        text-slate-400 dark:text-slate-500
-                       bg-slate-100 dark:bg-slate-800/80
-                       border border-slate-200 dark:border-slate-700/60
-                       hover:border-primary-300 dark:hover:border-primary-600/40
-                       transition-all duration-200 group"
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
+                       hover:bg-slate-100 dark:hover:bg-slate-800
+                       hover:text-slate-600 dark:hover:text-slate-300
+                       transition-all duration-150"
           >
-            <Search className="w-3.5 h-3.5 shrink-0 group-hover:text-primary-500 transition-colors" />
-            <span className="flex-1 text-left text-xs truncate">Search or jump to…</span>
-            <kbd className="hidden sm:flex items-center gap-0.5 text-[10px] font-mono bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded-md">
-              <span className="text-[11px]">⌘</span>K
-            </kbd>
+            <Search className="w-4 h-4" />
           </motion.button>
 
-          {/* Command palette dropdown */}
           <AnimatePresence>
             {searchOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                transition={{ duration: 0.2, ease }}
-                className="absolute top-[calc(100%+8px)] left-0 right-0 z-50 rounded-2xl overflow-hidden
+                transition={{ duration: 0.18, ease }}
+                className="absolute top-[calc(100%+10px)] right-0 w-80 z-50 rounded-2xl overflow-hidden
                            bg-white dark:bg-slate-900
                            border border-slate-200 dark:border-slate-700/60
                            shadow-2xl shadow-black/10 dark:shadow-black/40"
               >
-                {/* Search input */}
                 <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-                  <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                  <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <input
                     ref={inputRef}
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    placeholder="Type to search…"
+                    placeholder="Search pages…"
                     className="flex-1 text-sm bg-transparent text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none"
                   />
                   {query && (
@@ -192,7 +205,6 @@ const Navbar: React.FC = () => {
                   <kbd className="text-[10px] font-mono text-slate-300 dark:text-slate-600">ESC</kbd>
                 </div>
 
-                {/* Results */}
                 <div className="py-1.5 max-h-64 overflow-y-auto">
                   {results.length === 0 ? (
                     <p className="text-xs text-slate-400 text-center py-6">No results</p>
@@ -210,11 +222,11 @@ const Navbar: React.FC = () => {
                                      ${i === activeIdx
                                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
-                          initial={{ opacity: 0, x: -6 }}
+                          initial={{ opacity: 0, x: -4 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.03 }}
+                          transition={{ delay: i * 0.025 }}
                         >
-                          <span className="text-base w-6 text-center shrink-0">{page.emoji}</span>
+                          <page.Icon className="w-4 h-4 shrink-0 opacity-60" />
                           <span className="flex-1 font-medium truncate">{page.label}</span>
                           <ArrowRight className={`w-3.5 h-3.5 shrink-0 transition-opacity ${i === activeIdx ? 'opacity-100' : 'opacity-0'}`} />
                         </motion.button>
@@ -223,7 +235,7 @@ const Navbar: React.FC = () => {
                   )}
                 </div>
 
-                <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800">
                   <span className="text-[10px] text-slate-400">
                     <kbd className="font-mono bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[10px]">↑↓</kbd> navigate
                     <span className="mx-1.5">·</span>
@@ -234,18 +246,14 @@ const Navbar: React.FC = () => {
             )}
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* ── RIGHT: Actions ────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-end gap-1.5">
         <ThemeToggle />
         <LanguageSwitcher />
         <NotificationBell />
 
-        {/* Avatar + role */}
         {user && (
-          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-            <Link to="/profile" className="flex items-center gap-2.5 pl-2">
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }}>
+            <Link to="/profile" className="flex items-center gap-2 pl-1">
               <div className="hidden sm:flex flex-col items-end">
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 leading-tight">{user.name.split(' ')[0]}</span>
                 <span className="text-[10px] capitalize text-slate-400 leading-tight">{user.role}</span>
